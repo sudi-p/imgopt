@@ -47,10 +47,10 @@ class FileUpload(object):
               try:
                 input = {
                   "prompt": prompt,
-                  "image_num": 4,
+                  "image_num": 2,
                   "image_path": file,
                   "product_size": "0.5 * width",
-                  "negative_prompt": "illustration, 3d, sepia, painting, cartoons, sketch, (worst quality:2)"
+                  "negative_prompt": "(worst quality:2)"
                 }
                 output = replicate.run(
                   "logerzhu/ad-inpaint:b1c17d148455c1fda435ababe9ab1e03bc0d917cc3cf4251916f22c45c83c7df",
