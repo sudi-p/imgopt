@@ -43,17 +43,16 @@ class FileUpload(object):
             return
         if isinstance(file, BytesIO):
           original_image = Image.open(file)
-          show_file.image(original_image, caption="Original Image", use_column_width=True)
+          original_image_resized = original_image.resize((500, int(original_image.height * (500 / original_image.width))))
 
-        
-          try:
-              input_image = Image.open(file)
-              output_image = remove(input_image)
+          output_image = remove(original_image)
 
-              # Display background-removed image
-              st.image(output_image, caption="Background Removed", width=original_image.width)
+          col1, col2 = st.columns(2)
+          with col1:
+              st.image(original_image_resized, caption="Original Image", use_column_width=True)
+          with col2:
+              st.image(output_image, caption="Background Removed", use_column_width=True)
 
-            
             # if st.button("Generate Image"):
             #   try:
             #     input = {
@@ -78,8 +77,7 @@ class FileUpload(object):
             #       st.write(e.title)
             #     if (e.detail):
             #       st.write(e.detail)
-          except Exception as e:
-                st.write(f"An error occurred while removing the background: {e}")
+          
         else:
             data = pd.read_csv(file)
             st.dataframe(data.head(10))
