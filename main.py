@@ -6,9 +6,11 @@ try:
     import os
     from dotenv import load_dotenv
     load_dotenv()  # loads variables from .env file
+    from PIL import Image
     import replicate
     import pandas as pd
     import streamlit as st
+    from rembg import remove
 except Exception as e:
     print(e)
 
@@ -31,7 +33,7 @@ class FileUpload(object):
     def run(self):
         
         st.write("Image Optimization Tool")
-        REPLICATE_API_TOKEN = os.getenv('REPLICATE_API_TOKEN')
+        # REPLICATE_API_TOKEN = os.getenv('REPLICATE_API_TOKEN')
         prompt = st.text_input("Enter the prompt")
         st.markdown(STYLE, unsafe_allow_html=True)
         file = st.file_uploader("Upload file", type=self.fileTypes)
@@ -39,31 +41,45 @@ class FileUpload(object):
         if not file:
             show_file.info("Please upload a file of type: " + ", ".join(["csv", "png", "jpg"]))
             return
-        content = file.getvalue()
         if isinstance(file, BytesIO):
-            show_file.image(file)
+          original_image = Image.open(file)
+          show_file.image(original_image, caption="Original Image", use_column_width=True)
 
-            if st.button("Generate Image"):
-              try:
-                input = {
-                  "prompt": prompt,
-                  "image_num": 2,
-                  "image_path": file,
-                  "product_size": "0.5 * width",
-                  "negative_prompt": "(worst quality:2)"
-                }
-                output = replicate.run(
-                  "logerzhu/ad-inpaint:b1c17d148455c1fda435ababe9ab1e03bc0d917cc3cf4251916f22c45c83c7df",
-                  input=input
-                )
-                if not output:
-                  st.write("Loading...")
-                else:
-                  for image in output:
-                    st.image(image, width=400)
-              except Exception as e:
-                st.write(e.title)
-                st.write(e.detail)
+        
+          try:
+              input_image = Image.open(file)
+              output_image = remove(input_image)
+
+              # Display background-removed image
+              st.image(output_image, caption="Background Removed", width=original_image.width)
+
+            
+            # if st.button("Generate Image"):
+            #   try:
+            #     input = {
+            #       "prompt": prompt,
+            #       "image_num": 2,
+            #       "image_path": file,
+            #       "product_size": "0.5 * width",
+            #       "negative_prompt": "(worst quality:2)"
+            #     }
+            #     output = replicate.run(
+            #       "logerzhu/ad-inpaint:b1c17d148455c1fda435ababe9ab1e03bc0d917cc3cf4251916f22c45c83c7df",
+            #       input=input
+            #     )
+            #     if not output:
+            #       st.write("Loading...")
+            #     else:
+            #       for image in output:
+            #          st.image(image, width=400)
+            #   except Exception as e:
+            #     print(e)
+            #     if (e.title):
+            #       st.write(e.title)
+            #     if (e.detail):
+            #       st.write(e.detail)
+          except Exception as e:
+                st.write(f"An error occurred while removing the background: {e}")
         else:
             data = pd.read_csv(file)
             st.dataframe(data.head(10))
