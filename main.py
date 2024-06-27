@@ -4,6 +4,8 @@ from file_upload import FileUpload
 from dotenv import load_dotenv
 from image_processing import remove_background
 import os
+import sentry_sdk
+from utils import get_dominant_color
 
 load_dotenv()  # loads variables from .env file
 
@@ -15,6 +17,13 @@ img {
 }
 </style>
 """
+
+if (os.environ['ENVIRONMENT'] != "DEVELOPMENT"):
+  sentry_sdk.init(
+    dsn=os.environ['SENTRY_DSN'],
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+  )
 
 def main():
     st.markdown("<h1 style='text-align: center; color: grey;'>Image Optimization Tool</h1>", unsafe_allow_html=True)
@@ -47,7 +56,7 @@ def main():
         helper.display_side_by_side_images(resized_image, "Original Image", st.session_state.output_image, "Background Removed")
          
         
-        # get_dominant_color(st.session_state.output_image)
+        get_dominant_color(resized_image)
         
         # caption = helper.generate_prompt(file)
         # st.write(caption)
