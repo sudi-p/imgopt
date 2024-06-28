@@ -32,10 +32,10 @@ def main():
     if product_description and st.button("Analyze product description"):
       description = analyze_product_description(product_description)
       if (description):
-        print(f"Description: {description}")
-        st.write(f'Title: {description['title']}')
-        st.write(f'Subtitle: {description['subtitle']}')
-        st.write('Features: ')
+        print(f'Description: {description}')
+        st.write(f"Title: {description['title']}")
+        st.write(f"Subtitle: {description['subtitle']}")
+        st.write('Features:')
         for feature in description['features']:
           st.write(f'- {feature}')
     # text_title = st.text_input("Enter the title")
