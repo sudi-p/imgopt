@@ -1,28 +1,25 @@
 from PIL import Image
+from colorthief import ColorThief
 import streamlit as st
 import io
+import colorsys
 
 def get_dominant_color(image):
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    buffered.seek(0)
+  buffered = io.BytesIO()
+  image.save(buffered, format="PNG")
+  buffered.seek(0)
 
-    image = Image.open(buffered).convert('RGB')
-    width, height = image.size
-   
-    image = image.resize((width // 10, height // 10))
+  ct = ColorThief("./products/tea.png");
+  palette = ct.get_palette(color_count=5)
 
-    pixels = image.getcolors(image.size[0] * image.size[1])
-    if not pixels:
-      st.write("Error: Unable to get colors from image")
-      return
+  columns = st.columns(len(palette))
 
-    sorted_pixels = sorted(pixels, key=lambda t: t[0], reverse=True)
-    
-    dominant_colors = [color[1] for color in sorted_pixels[:5]]
+  for idx, color in enumerate(palette):
+    hex_color = rgb_to_hex(color)
+    with columns[idx]:
+      st.markdown(f"<div style='background-color:{hex_color}; width:80px; height:80px;'></div>", unsafe_allow_html=True)
+      st.write(hex_color)
 
-    for i, color in enumerate(dominant_colors):
-        hex_color = '#{:02x}{:02x}{:02x}'.format(*color)
-        st.markdown(f"<div style='background-color:{hex_color}; width:200px; height:100px;'></div>", unsafe_allow_html=True)
-        st.write(f"Dominant color {i + 1}: {hex_color}")
-
+# Function to convert RGB to HEX
+def rgb_to_hex(rgb):
+    return '#{:02x}{:02x}{:02x}'.format(rgb[0], rgb[1], rgb[2])

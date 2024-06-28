@@ -5,6 +5,7 @@ from io import BytesIO
 import streamlit as st
 import concurrent.futures
 import replicate
+import json
 
 def generate_prompt(image):
     import replicate
@@ -15,6 +16,25 @@ def generate_prompt(image):
             "image": image
         }
     )
+
+def analyze_product_description(description):
+    # The meta/meta-llama-3-8b-instruct model can stream output as it's running.
+    input = {
+        "prompt": description,
+        "max_new_tokens": 512,
+        "system_prompt": "Analyze the following paragraph and extract the object of key-value pairs:\\n\\n{paragraph}\\n\\n with keys title, subtitle, and features. i want to use this object directly in code. Don't give extra text. The output should start with \"{\" and end with \"}\".",
+    }
+    # To capture the streamed output
+    result = ""
+    for event in replicate.stream("meta/meta-llama-3-8b-instruct", input=input):
+        result += str(event)
+    # Assuming the result is a JSON-like string, we parse it to a dictionary
+    try:
+        key_value_object = json.loads(str(result))
+    except json.JSONDecodeError:
+        key_value_object = {}
+    return key_value_object
+
 
 def add_text_to_image(image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3):
     api_key = os.environ['APITEMPLATE_API_KEY']
