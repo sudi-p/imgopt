@@ -31,12 +31,13 @@ def main():
     product_description = st.text_area("Enter the product description")
     if product_description and st.button("Analyze product description"):
       description = analyze_product_description(product_description)
-      print(f"Description: {description}")
-      st.write(f'Title: {description['title']}')
-      st.write(f'Subtitle: {description['subtitle']}')
-      st.write('Features: ')
-      for feature in description['features']:
-         st.write(f'- {feature}')
+      if (description):
+        print(f"Description: {description}")
+        st.write(f'Title: {description['title']}')
+        st.write(f'Subtitle: {description['subtitle']}')
+        st.write('Features: ')
+        for feature in description['features']:
+          st.write(f'- {feature}')
     # text_title = st.text_input("Enter the title")
     # text_subtitle = st.text_input("Enter the subtitle")
     # text_feature1 = st.text_input("Enter feature 1")
