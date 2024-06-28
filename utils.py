@@ -25,3 +25,4 @@ def get_dominant_color(image):
         hex_color = '#{:02x}{:02x}{:02x}'.format(*color)
         st.markdown(f"<div style='background-color:{hex_color}; width:200px; height:100px;'></div>", unsafe_allow_html=True)
         st.write(f"Dominant color {i + 1}: {hex_color}")
+

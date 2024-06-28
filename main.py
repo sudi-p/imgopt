@@ -1,5 +1,5 @@
 import streamlit as st
-from api_calls import add_text_to_image
+from api_calls import add_text_to_image, generate_wolverinn_realistic_background, generate_logerzhu_adinpaint_images
 from file_upload import FileUpload
 from dotenv import load_dotenv
 from image_processing import remove_background
@@ -27,12 +27,12 @@ if (os.environ['ENVIRONMENT'] != "DEVELOPMENT"):
 
 def main():
     st.markdown("<h1 style='text-align: center; color: grey;'>Image Optimization Tool</h1>", unsafe_allow_html=True)
-    
-    text_title = st.text_input("Enter the title")
-    text_subtitle = st.text_input("Enter the subtitle")
-    text_feature1 = st.text_input("Enter feature 1")
-    text_feature2 = st.text_input("Enter feature 2")
-    text_feature3 = st.text_input("Enter feature 3")
+    input_prompt = st.text_input("Enter the prompt")
+    # text_title = st.text_input("Enter the title")
+    # text_subtitle = st.text_input("Enter the subtitle")
+    # text_feature1 = st.text_input("Enter feature 1")
+    # text_feature2 = st.text_input("Enter feature 2")
+    # text_feature3 = st.text_input("Enter feature 3")
     
     st.markdown(STYLE, unsafe_allow_html=True)
     
@@ -51,17 +51,16 @@ def main():
         st.session_state.output_image = original_image
     
     if original_image:
-        
         st.session_state.output_image = remove_background(original_image)
         helper.display_side_by_side_images(resized_image, "Original Image", st.session_state.output_image, "Background Removed")
-         
+        # get_dominant_color(st.session_state.output_image)
         
-        get_dominant_color(resized_image)
-        
-        # caption = helper.generate_prompt(file)
-        # st.write(caption)
+        caption = helper.generate_prompt(file)
+        st.write(caption)
         if st.button("Generate Image") and st.session_state.output_image:
-            add_text_to_image(st.session_state.output_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3)
+        #     add_text_to_image(st.session_state.output_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3)
+          generate_logerzhu_adinpaint_images(input_prompt, file)
+        #   self.generate_wolverinn_realistic_background(input_prompt, file)
     file.close()
 
 if __name__ == "__main__":
