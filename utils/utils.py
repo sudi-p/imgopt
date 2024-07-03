@@ -9,11 +9,10 @@ def get_dominant_color(image):
   image.save(buffered, format="PNG")
   buffered.seek(0)
 
-  ct = ColorThief("./products/tea.png");
+  ct = ColorThief(buffered);
   palette = ct.get_palette(color_count=5)
 
   columns = st.columns(len(palette))
-
   for idx, color in enumerate(palette):
     hex_color = rgb_to_hex(color)
     with columns[idx]:

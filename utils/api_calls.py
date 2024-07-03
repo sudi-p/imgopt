@@ -22,7 +22,7 @@ def analyze_product_description(description):
     input = {
         "prompt": description,
         "max_new_tokens": 512,
-        "system_prompt": "Analyze the following paragraph and extract the object of key-value pairs:\\n\\n{paragraph}\\n\\n with keys title, subtitle, and features. i want to use this object directly in code. Don't give extra text. The output should start with \"{\" and end with \"}\".",
+        "system_prompt": "Analyze the following paragraph and extract the object of key-value pairs:\\n\\n{paragraph}\\n\\n with keys title, subtitle, and features with each features less than 20 characters. i want to use this object directly in code. Don't give extra text. The output should start with \"{\" and end with \"}\".",
     }
     # To capture the streamed output
     result = ""
@@ -34,7 +34,6 @@ def analyze_product_description(description):
     except json.JSONDecodeError:
         key_value_object = {}
     return key_value_object
-
 
 def add_text_to_image(image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3):
     api_key = os.environ['APITEMPLATE_API_KEY']
@@ -69,7 +68,8 @@ def add_text_to_image(image, text_title, text_subtitle, text_feature1, text_feat
             },
             {
                 "name":"product-image",
-                "src": f"data:image/png;base64,{base64.b64encode(img_bytes).decode()}"
+                "src": f"data:image/png;base64,{base64.b64encode(img_bytes).decode()}",
+                "width": 188
             }
         ]
     }
@@ -116,7 +116,8 @@ def generate_logerzhu_adinpaint_images(prompt, file):
     generated_images = output[1:]
     for image in generated_images:
         st.image(image, width=400)
-    
+
+#Model 2
 def generate_wolverinn_realistic_background(prompt, file):
     output = replicate.run(
         "wolverinn/realistic-background:ce02013b285241316db1554f28b583ef5aaaf4ac4f118dc08c460e634b2e3e6b",
