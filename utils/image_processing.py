@@ -1,10 +1,6 @@
 from rembg import remove
 from PIL import Image
 import io
-from colorthief import ColorThief
-import matplotlib.pyplot as plt
-import colorsys
-
 
 def remove_background(image):
     buffered = io.BytesIO()
