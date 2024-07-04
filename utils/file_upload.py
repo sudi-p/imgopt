@@ -19,8 +19,6 @@ class FileUpload:
         else:
             image = Image.open(file)
             resized_image = resize_image(image)
-            # print(image.size)
-            # print(resized_image.size)
             return image, resized_image
         return None, None
 
@@ -30,8 +28,6 @@ class FileUpload:
     def display_side_by_side_images(self, image1, caption1, image2, caption2):
         col1, col2 = st.columns(2)
         with col1:
-            print(image1.size)
             self.display_image(image1, caption1)
         with col2:
-            print(image2.size)
             self.display_image(image2, caption2)
