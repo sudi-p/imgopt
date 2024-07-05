@@ -18,12 +18,12 @@ img {
 </style>
 """
 
-if (os.environ['ENVIRONMENT'] != "DEVELOPMENT"):
-  sentry_sdk.init(
-    dsn=os.environ['SENTRY_DSN'],
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
-  )
+if os.environ['ENVIRONMENT'] != "DEVELOPMENT":
+    sentry_sdk.init(
+        dsn=os.environ['SENTRY_DSN'],
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
 
 def main():
     st.markdown("<h1 style='text-align: center; color: grey;'>Image Optimization Tool</h1>", unsafe_allow_html=True)
@@ -43,7 +43,6 @@ def main():
         resized_bg_removed_image = resize_image(bg_removed_image)
         
         # Output: (width, height)
-        print(resized_bg_removed_image.size)
         st.session_state.output_image = resized_bg_removed_image
         helper.display_side_by_side_images(resized_original_image, "Original Image", resized_bg_removed_image, "Background Removed")
 
@@ -52,50 +51,42 @@ def main():
 
     col1, col2, col3 = st.columns(3)
     with col1: 
-      if st.button("Background"):
-         st.session_state.current = "Background"
+        if st.button("Background"):
+            st.session_state.current = "Background"
     with col2:
-      if st.button("Infographics"):
-         st.session_state.current = "Infographics"
+        if st.button("Infographics"):
+            st.session_state.current = "Infographics"
     with col3:
-      if st.button("Dominant Colors"):
-         st.session_state.current = "DominantColors"
+        if st.button("Dominant Colors"):
+            st.session_state.current = "DominantColors"
 
-    if (st.session_state.current == "Background"):
-      input_prompt = st.text_input("Enter the prompt")
-      if st.button("Generate Background") and st.session_state.output_image:
-        # generate_logerzhu_adinpaint_images(input_prompt, file)
-        generate_wolverinn_realistic_background(input_prompt, file)
+    if st.session_state.current == "Background":
+        input_prompt = st.text_input("Enter the prompt")
+        if st.button("Generate Background") and 'output_image' in st.session_state:
+            generate_wolverinn_realistic_background(input_prompt, file)
     
-    if (st.session_state.current == "Infographics"):
-      product_description = st.text_area("Enter the product description")
-      if st.button("Analyze product description"):
-        description = analyze_product_description(product_description)
-        if (description):
-          title = description['title']
-          subtitle = description['subtitle']
-          print(description)
-          features = description['features']
-          if (len(features)==0):
-            st.write("Description is too short to generate text for images infographics")
-          st.session_state.title = title
-          st.session_state.subtitle = subtitle
-          st.session_state.features = features
-      if 'title' in st.session_state:
-        text_title = st.text_input("Enter the title", value=st.session_state.title)
-        text_subtitle = st.text_input("Enter the subtitle", value=st.session_state.subtitle)
-        text_feature1 = st.text_input("Enter feature 1", value=st.session_state.features[0] if len(st.session_state.features) > 0 else "")
-        text_feature2 = st.text_input("Enter feature 2", value=st.session_state.features[1] if len(st.session_state.features) > 1 else "")
-        text_feature3 = st.text_input("Enter feature 3", value=st.session_state.features[2] if len(st.session_state.features) > 2 else "")
-        st.markdown(STYLE, unsafe_allow_html=True)
-        if st.button("Generate Infographics") and st.session_state.output_image:
-          add_text_to_image(st.session_state.output_image, original_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3)
+    if st.session_state.current == "Infographics":
+        product_description = st.text_area("Enter the product description")
+        if st.button("Analyze product description"):
+            description = analyze_product_description(product_description)
+            if description:
+                st.session_state.title = description.get('title', '')
+                st.session_state.subtitle = description.get('subtitle', '')
+                st.session_state.features = description.get('features', [])
+        
+        if 'title' in st.session_state:
+            text_title = st.text_input("Enter the title", value=st.session_state.title)
+            text_subtitle = st.text_input("Enter the subtitle", value=st.session_state.subtitle)
+            text_feature1 = st.text_input("Enter feature 1", value=st.session_state.features[0] if len(st.session_state.features) > 0 else "")
+            text_feature2 = st.text_input("Enter feature 2", value=st.session_state.features[1] if len(st.session_state.features) > 1 else "")
+            text_feature3 = st.text_input("Enter feature 3", value=st.session_state.features[2] if len(st.session_state.features) > 2 else "")
+            st.markdown(STYLE, unsafe_allow_html=True)
+            if st.button("Generate Infographics") and 'output_image' in st.session_state:
+                add_text_to_image(st.session_state.output_image, original_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3)
     
-    # caption = helper.generate_prompt(file)
-    # st.write(caption)
-    
-    if (st.session_state.current == "DominantColors"):
-      get_dominant_color(st.session_state.output_image)
+    if st.session_state.current == "DominantColors":
+        if 'output_image' in st.session_state:
+            get_dominant_color(st.session_state.output_image)
 
     file.close()
 
