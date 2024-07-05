@@ -15,6 +15,7 @@ def get_dominant_color(image):
   columns = st.columns(len(palette))
   for idx, color in enumerate(palette):
     hex_color = rgb_to_hex(color)
+    print(hex_color)
     with columns[idx]:
       st.markdown(f"<div style='background-color:{hex_color}; width:80px; height:80px;'></div>", unsafe_allow_html=True)
       st.write(hex_color)

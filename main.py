@@ -43,6 +43,7 @@ def main():
         resized_bg_removed_image = resize_image(bg_removed_image)
         
         # Output: (width, height)
+        print(resized_bg_removed_image.size)
         st.session_state.output_image = resized_bg_removed_image
         helper.display_side_by_side_images(resized_original_image, "Original Image", resized_bg_removed_image, "Background Removed")
 
@@ -88,7 +89,7 @@ def main():
         text_feature3 = st.text_input("Enter feature 3", value=st.session_state.features[2] if len(st.session_state.features) > 2 else "")
         st.markdown(STYLE, unsafe_allow_html=True)
         if st.button("Generate Infographics") and st.session_state.output_image:
-          add_text_to_image(st.session_state.output_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3)
+          add_text_to_image(st.session_state.output_image, original_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3)
     
     # caption = helper.generate_prompt(file)
     # st.write(caption)
