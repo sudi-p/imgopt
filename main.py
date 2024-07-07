@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from utils.image_processing import remove_background, resize_image
 import os
 import sentry_sdk
-from utils.utils import get_dominant_color
+from utils.utils import get_dominant_color, display_colors
 
 load_dotenv()  # loads variables from .env file
 
@@ -24,6 +24,7 @@ if os.environ['ENVIRONMENT'] != "DEVELOPMENT":
         traces_sample_rate=1.0,
         profiles_sample_rate=1.0,
     )
+
 
 def main():
     st.markdown("<h1 style='text-align: center; color: grey;'>Image Optimization Tool</h1>", unsafe_allow_html=True)
@@ -86,7 +87,13 @@ def main():
     
     if st.session_state.current == "DominantColors":
         if 'output_image' in st.session_state:
-            get_dominant_color(st.session_state.output_image)
+            res = get_dominant_color(st.session_state.output_image)
+            colors = res["colors"]
+            color_coverage = res["color_coverage"]
+            background_foreground = res["background_foreground"]
+            background_color = background_foreground["background_color"]
+            text_color = background_foreground["text_color"]
+            display_colors(colors, color_coverage, background_color, text_color)
 
     file.close()
 

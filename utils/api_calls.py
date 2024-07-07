@@ -34,7 +34,14 @@ def add_text_to_image(image, original_image, text_title, text_subtitle, text_fea
     api_key = os.environ['APITEMPLATE_API_KEY']
 
     templates = [
-        {"template_id": os.environ['APITEMPLATE_TEMPLATE2_ID'], "use_original_image": False, "template_height": 1080, "template_width": 1080, "template_product_image_height": 425, "template_product_image_width": 425},
+        {
+            "template_id": os.environ['APITEMPLATE_TEMPLATE2_ID'],
+            "use_original_image": False,
+            "template_height": 1080,
+            "template_width": 1080,
+            "template_product_image_height": 425,
+            "template_product_image_width": 425
+        },
     ]
     data = {
         "overrides": [
