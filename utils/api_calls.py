@@ -30,7 +30,9 @@ def analyze_product_description(description):
         key_value_object = {}
     return key_value_object
 
-def add_text_to_image(image, original_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3):
+def add_text_to_image(image, original_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3, background_color, text_color):
+    text_color = text_color
+    background_color = background_color
     api_key = os.environ['APITEMPLATE_API_KEY']
 
     templates = [
@@ -45,11 +47,12 @@ def add_text_to_image(image, original_image, text_title, text_subtitle, text_fea
     ]
     data = {
         "overrides": [
-            {"name": "text-title", "text": text_title},
+            {"name": "text-title", "text": text_title, "color": text_color},
             {"name": "text-subtitle", "text": text_subtitle},
-            {"name": "text-list-1", "text": text_feature1},
-            {"name": "text-list-2", "text": text_feature2},
-            {"name": "text-list-3", "text": text_feature3}
+            {"name": "text-list-1", "text": text_feature1, "color": text_color, "strokeColor": text_color},
+            {"name": "text-list-2", "text": text_feature2, "color": text_color},
+            {"name": "text-list-3", "text": text_feature3, "color": text_color},
+            {"name": "background", "backgroundColor": background_color},
         ]
     }
 
