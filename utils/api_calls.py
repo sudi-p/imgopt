@@ -3,7 +3,10 @@ from io import BytesIO
 import streamlit as st
 import concurrent.futures
 from PIL import Image
+from loguru import logger
+import ast
 from utils.image_processing import prepare_image_for_template
+from ps.ps import add_text
 
 def generate_prompt(image):
     return replicate.run(
@@ -12,93 +15,43 @@ def generate_prompt(image):
     )
 
 def analyze_product_description(description):
+    logger.info("analyze_product_description called")
     input = {
         "prompt": description,
         "max_new_tokens": 512,
         "system_prompt": (
-            "Analyze the following paragraph and extract the object of key-value pairs:\\n\\n{paragraph}\\n\\n"
-            "with keys title, subtitle, and features with each features less than 20 characters. "
-            "I want to use this object directly in code. Don't give extra text. The output should start with \"{\" and end with \"}\"."
+            "You are an expert in the Amazon marketplace. "
+            "Generate the title, subtitle, and callouts "
+            "to use in the images of this product."
+            "The output should be a Python dictionary "
+            "{'title': 'some text', 'titleSub': 'some text', "
+            "'callouts': ['callout1', 'callout2']}. Ignore other "
+            "texts before [ and after ]. Each callouts should be "
+            "less than 5 words."
         ),
     }
     result = ""
     for event in replicate.stream("meta/meta-llama-3-8b-instruct", input=input):
         result += str(event)
+    
     try:
-        key_value_object = json.loads(result)
+        start = result.find("{")
+        end = result.rfind("}") + 1
+        dict_str = result[start:end]
+
+        # Convert the string to a Python dictionary
+        
+        logger.info(dict_str)
+        key_value_object = ast.literal_eval(dict_str)
     except json.JSONDecodeError:
         key_value_object = {}
     return key_value_object
 
-def add_text_to_image(image, original_image, text_title, text_subtitle, text_feature1, text_feature2, text_feature3, background_color, text_color):
-    text_color = text_color
-    background_color = background_color
-    api_key = os.environ['APITEMPLATE_API_KEY']
-
-    templates = [
-        {
-            "template_id": os.environ['APITEMPLATE_TEMPLATE2_ID'],
-            "use_original_image": False,
-            "template_height": 1080,
-            "template_width": 1080,
-            "template_product_image_height": 425,
-            "template_product_image_width": 425
-        },
-    ]
-    data = {
-        "overrides": [
-            {"name": "text-title", "text": text_title, "color": text_color},
-            {"name": "text-subtitle", "text": text_subtitle},
-            {"name": "text-list-1", "text": text_feature1, "color": text_color, "strokeColor": text_color},
-            {"name": "text-list-2", "text": text_feature2, "color": text_color},
-            {"name": "text-list-3", "text": text_feature3, "color": text_color},
-            {"name": "background", "backgroundColor": background_color},
-        ]
-    }
-
-    def create_image(template):
-        img_to_use = original_image if template["use_original_image"] else image
-        prepared_image = prepare_image_for_template(
-            img_to_use,
-            template["template_height"],
-            template["template_width"],
-            template["template_product_image_height"],
-            template["template_product_image_width"]
-        )
-        buffered = BytesIO()
-        prepared_image.save(buffered, format="PNG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode()
-        data["overrides"].append({
-            "name": "product-image",
-            "src": f"data:image/png;base64,{img_base64}",
-            "scaleX": 1,
-            "scaleY": 1
-        })
-        response = requests.post(
-            f"https://rest.apitemplate.io/v2/create-image?template_id={template['template_id']}",
-            headers={"X-API-KEY": api_key},
-            json=data
-        )
-        return response
-    
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_template = {executor.submit(create_image, template): template["template_id"] for template in templates}
-
-        for future in concurrent.futures.as_completed(future_to_template):
-            template_name = future_to_template[future]
-            try:
-                response = future.result()
-                if response.status_code == 200:
-                    download_url = response.json().get('download_url')
-                    st.image(download_url, width=400)
-                    with requests.get(download_url, stream=True) as r:
-                        r.raise_for_status()
-                        img = Image.open(BytesIO(r.content))
-                else:
-                    st.write(f"Error in generating image with {template_name}")
-            except Exception as e:
-                st.write(f"Exception in processing {template_name}: {e}")
-
+def add_text_to_image(text_title, text_subtitle, text_feature1,
+     text_feature2, text_feature3, template):
+    title = text_title
+    subTitle = text_subtitle
+    return add_text(template, title, subTitle)
 
 def generate_logerzhu_adinpaint_images(prompt, file):
     input = {
