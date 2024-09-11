@@ -1,7 +1,10 @@
 import boto3
 import os
 from botocore.exceptions import NoCredentialsError
-from  loguru import logger
+from loguru import logger
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialize S3 client
 s3_client = boto3.client(
