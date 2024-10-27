@@ -1,0 +1,9 @@
+.env
+.vscode
+venv
+./googledrive/service.json
+.pyc
+*.pyc
+__pycache__/
+.idea
+.devcontainer/
