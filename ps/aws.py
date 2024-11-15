@@ -10,9 +10,9 @@ load_dotenv()
 s3_client = boto3.client(
     's3',
     region_name='us-west-1',
-    aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-    aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
-    config=boto3.session.Config(signature_version='s3v4')
+    aws_access_key_id='AKIAYLRCW5Z53MCRUCWB',
+    aws_secret_access_key='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',
+    config=boto3.session.Config(signature_version='v4')
 )
 
 # Bucket name
@@ -28,7 +28,7 @@ def get_signed_download_url(path):
                 'Bucket': bucket,
                 'Key': path
             },
-            ExpiresIn=13600
+            ExpiresIn=3600
         )
         logger.info(f"Fetched final url, {url}")
         return url
@@ -37,6 +37,31 @@ def get_signed_download_url(path):
         return None
 
 # Get signed URL for uploading an object
+import boto3
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+def list_bucket_contents():
+    bucket_name = 'unboxme'
+    prefix = 'Outputs/'
+    try:
+        # Attempt to list objects in the specified bucket and prefix
+        response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+
+        if 'Contents' in response:
+            print(f"Contents of bucket '{bucket_name}' under prefix '{prefix}':")
+            for obj in response['Contents']:
+                print(" -", obj['Key'])  # Print each file's key
+        else:
+            print("No objects found in the specified bucket and prefix.")
+            
+    except NoCredentialsError:
+        print("Credentials not available or are incorrect.")
+    except PartialCredentialsError:
+        print("Incomplete credentials provided.")
+    except Exception as e:
+        print(f"Error accessing bucket: {e}")
+
+# Run the function to list bucket contents
+
 def get_signed_upload_url(path):
     try:
         # response = s3_client.generate_presigned_post(
@@ -49,8 +74,10 @@ def get_signed_upload_url(path):
               'Bucket': bucket,
               'Key': path,
           },
-          ExpiresIn=43600
+          
+          ExpiresIn=3600
         )
+        list_bucket_contents()
         return response
     except NoCredentialsError:
         print("Credentials not available")

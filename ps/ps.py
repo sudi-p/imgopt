@@ -37,7 +37,7 @@ def getAdobeAccessToken(PS_CLIENT_ID, PS_CLIENT_SECRET):
         logging.error("The response did not contain an access token.")
     return None
 
-def edit_text(token, PS_CLIENT_ID, signed_get_url, signed_post_url, title, subTitle):
+def edit_text(token, PS_CLIENT_ID, signed_get_url, signed_post_url, title, subTitle, callout1, callout2, callout3):
     storage = 'external'
 
     url = "https://image.adobe.io/pie/psdService/text"
@@ -69,6 +69,27 @@ def edit_text(token, PS_CLIENT_ID, signed_get_url, signed_post_url, title, subTi
                         "contents": subTitle,
                     }
                 },
+                # add more
+                 {
+                    "name": "callout1",
+                    "text": {
+                        "contents": callout1,
+                    }
+                },
+                # add more
+                 {
+                    "name": "callout2",
+                    "text": {
+                        "contents": callout2,
+                    }
+                },
+                # add more
+                 {
+                    "name": "callout3",
+                    "text": {
+                        "contents": callout3,
+                    }
+                },
             ]
         },
         "outputs": [
@@ -98,40 +119,40 @@ def edit_text(token, PS_CLIENT_ID, signed_get_url, signed_post_url, title, subTi
         logger.error("The response does not contain expected keys")
     return None
 
-def check_job_status(job_url, token, PS_CLIENT_ID):
+import time
+
+def check_job_status(job_url, token, PS_CLIENT_ID, retries=50, delay=1):
     headers = {
         "Authorization": f"Bearer {token}",
         "x-api-key": PS_CLIENT_ID,
     }
-    time.sleep(3)
-    # status = ""
-    # while status not in ['succeeded', 'failed']:
-    try:
-        resp = requests.get(job_url, headers=headers)
-        resp.raise_for_status()
 
-        data = resp.json()
-        print(json.dumps(data, indent=4))
-        output_link = data["outputs"][0]["_links"]["renditions"][0]["href"]
-        parsed_url = urlparse(output_link)
+    for attempt in range(retries):
+        try:
+            resp = requests.get(job_url, headers=headers)
+            resp.raise_for_status()
 
-        # Extract the base URL
-        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}"
-        start_pos = base_url.find("Outputs")
+            data = resp.json()
+            print(json.dumps(data, indent=4))  # Print response for debugging
 
-        # Extract the path using string slicing
-        if start_pos != -1:
-            path = base_url[start_pos:]
-        else:
-            path = None
-        logger.info(f"Base url: {path}")
-        return path
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Request error: {e}")
-        # break
-    except json.JSONDecodeError:
-        logging.error("Failed to decode JSON response")
-        # break
+            # Check if 'outputs' and 'renditions' are present
+            if "outputs" in data and "_links" in data["outputs"][0] and "renditions" in data["outputs"][0]["_links"]:
+                output_link = data["outputs"][0]["_links"]["renditions"][0]["href"]
+                return output_link
+            elif data["outputs"][0]["status"] == "pending":
+                print(f"Attempt {attempt + 1}: Job still pending. Retrying in {delay} seconds...")
+                time.sleep(delay)
+            elif data["outputs"][0]["status"] == "running":
+                print(f"Attempt {attempt + 1}: Job still Running. Retrying in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                logger.error("Unexpected job status or structure.")
+                return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request error: {e}")
+            return None
+    raise Exception("Job did not complete successfully within the retry limit.")
+
 
 def check(token, PS_CLIENT_ID):
     check_url = "https://image.adobe.io/pie/psdService/hello"
@@ -147,7 +168,7 @@ def check(token, PS_CLIENT_ID):
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error: {e}")
 
-def add_text(template, title, subTitle):
+def add_text(template, title, subTitle, callout1, callout2, callout3):
     PS_CLIENT_ID = os.environ['PS_CLIENT_ID']
     PS_CLIENT_SECRET = os.environ['PS_CLIENT_SECRET']
 
@@ -161,7 +182,7 @@ def add_text(template, title, subTitle):
         token = getAdobeAccessToken(PS_CLIENT_ID, PS_CLIENT_SECRET)
         if token:
             check(token, PS_CLIENT_ID)
-            job_url = edit_text(token, PS_CLIENT_ID, signed_get_url, signed_post_url, title, subTitle)
+            job_url = edit_text(token, PS_CLIENT_ID, signed_get_url, signed_post_url, title, subTitle, callout1, callout2, callout3)
             logger.info("Job URL fetched")
             if job_url:
                 output_s3_url = check_job_status(job_url, token, PS_CLIENT_ID)
@@ -172,4 +193,38 @@ def add_text(template, title, subTitle):
             logging.error("Failed to obtain access token")
     else:
         logging.error("Failed to generate signed URLs")
+
+from psd_tools import PSDImage
+from loguru import logger
+
+def validate_psd_structure_local(psd_path):
+    """
+    Validates the structure of a PSD file locally by checking for required layers.
+    
+    Args:
+        psd_path (str): Path to the PSD file to validate.
+    
+    Returns:
+        tuple: (bool, str) A boolean indicating success and a message.
+    """
+    required_layers = {"title", "subtitle", "callout1", "callout2", "callout3"}
+    try:
+        # Load the PSD file
+        psd = PSDImage.open(psd_path)
+        logger.info(f"Loaded PSD file: {psd_path}")
+
+        # Collect layer names
+        layer_names = {layer.name for layer in psd.descendants() if layer.kind == 'type'}
+        logger.info(f"Found layers: {layer_names}")
+
+        # Check for missing layers
+        missing_layers = required_layers - layer_names
+        if missing_layers:
+            return False, f"Missing required layers: {', '.join(missing_layers)}"
+        
+        return True, "PSD validation successful. All required layers are present."
+    
+    except Exception as e:
+        logger.error(f"Error validating PSD structure: {e}")
+        return False, f"Error occurred while validating PSD: {e}"
 

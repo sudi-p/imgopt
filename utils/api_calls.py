@@ -25,7 +25,7 @@ def analyze_product_description(description):
             "to use in the images of this product."
             "The output should be a Python dictionary "
             "{'title': 'some text', 'titleSub': 'some text', "
-            "'callouts': ['callout1', 'callout2']}. Ignore other "
+            "'callouts': ['callout1', 'callout2', 'callout3']}. Ignore other "
             "texts before [ and after ]. Each callouts should be "
             "less than 5 words."
         ),
@@ -51,7 +51,7 @@ def add_text_to_image(text_title, text_subtitle, text_feature1,
      text_feature2, text_feature3, template):
     title = text_title
     subTitle = text_subtitle
-    return add_text(template, title, subTitle)
+    return add_text(template, title, subTitle, text_feature1, text_feature2, text_feature3)
 
 def generate_logerzhu_adinpaint_images(prompt, file):
     input = {

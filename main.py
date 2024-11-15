@@ -1,15 +1,15 @@
-import streamlit as st
-from utils.api_calls import add_text_to_image, generate_wolverinn_realistic_background, generate_logerzhu_adinpaint_images, analyze_product_description
-from utils.file_upload import FileUpload
-from dotenv import load_dotenv
-from utils.image_processing import remove_background, resize_image
 import os
-import sentry_sdk
-from utils.utils import get_dominant_color, display_colors
-import threading
+import streamlit as st
+from dotenv import load_dotenv
+from ps.aws import get_signed_upload_url, get_signed_download_url
+from ps.ps import validate_psd_structure_local
+from utils.api_calls import add_text_to_image, analyze_product_description
+from ps.ps import getAdobeAccessToken
 from loguru import logger
+import requests
 
-load_dotenv()  # loads variables from .env file
+# Load environment variables
+load_dotenv()
 
 STYLE = """
 <style>
@@ -20,75 +20,127 @@ img {
 </style>
 """
 
-if os.environ['ENVIRONMENT'] != "DEVELOPMENT":
-    sentry_sdk.init(
-        dsn=os.environ['SENTRY_DSN'],
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
-    )
+import random
+
+def upload_psd(uploaded_psd):
+    """
+    Handles the PSD upload process and local validation.
+
+    Args:
+        uploaded_psd: The uploaded PSD file object.
+    Returns:
+        str: The S3 key of the uploaded template if successful, else None.
+    """
+    if not uploaded_psd:
+        st.error("No PSD file uploaded.")
+        return None
+
+    # Save uploaded file temporarily
+    temp_folder = "temp"
+    os.makedirs(temp_folder, exist_ok=True)
+    local_path = os.path.join(temp_folder, uploaded_psd.name)
+
+    with open(local_path, "wb") as f:
+        f.write(uploaded_psd.getbuffer())
+
+    # Validate PSD locally
+    is_valid, validation_message = validate_psd_structure_local(local_path)
+    if is_valid:
+        st.success(validation_message)
+    else:
+        st.error(validation_message)
+        return None
+
+    # Generate a random name for the uploaded file
+    random_id = random.randint(1, 1000)
+    s3_key = f"Inputs/Template_{random_id}.psd"
+    upload_url = get_signed_upload_url(s3_key)
+    if not upload_url:
+        st.error("Failed to generate signed upload URL.")
+        return None
+
+    # Upload to S3
+    try:
+        with open(local_path, "rb") as f:
+            response = requests.put(upload_url, data=f)
+            if response.status_code == 200:
+                st.success(f"PSD template '{uploaded_psd.name}' uploaded successfully!")
+                return s3_key
+            else:
+                st.error(f"Failed to upload PSD to S3. Status code: {response.status_code}")
+                logger.error(f"Upload error: {response.text}")
+                return None
+    except Exception as e:
+        logger.error(f"Error uploading PSD to S3: {e}")
+        st.error("Failed to upload PSD template. Please try again.")
+        return None
+
+
 
 def main():
     st.markdown("<h1 style='text-align: center; color: grey;'>Image Optimization Tool</h1>", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1: 
-        if st.button("Get Background"):
-            st.session_state.task = "Get Background"
-    with col2:
-        if st.button("Change Callouts"):
-            st.session_state.task = "Change Callouts"
-    if 'task' not in st.session_state:
-        st.session_state.task = "Get Background"
-    if st.session_state.task == "Get Background":
-        file = st.file_uploader("Upload file", type=["csv", "png", "jpg"])
-        show_file = st.empty()
-        if not file:
-            show_file.info("Please upload a file of type: csv, png, jpg")
-            return
-        
-        helper = FileUpload()
-        
-        original_image, resized_original_image = helper.load_and_display_file(file)
-        
-        if original_image:
-            bg_removed_image = remove_background(original_image)
-            resized_bg_removed_image = resize_image(bg_removed_image)
-            
-            # Output: (width, height)
-            st.session_state.output_image = resized_bg_removed_image
-            helper.display_side_by_side_images(resized_original_image, "Original Image", resized_bg_removed_image, "Background Removed")
+    st.markdown(STYLE, unsafe_allow_html=True)
 
-            input_prompt = st.text_input("Enter the prompt")
-            if st.button("Generate Background") and 'output_image' in st.session_state:
-                generate_wolverinn_realistic_background(input_prompt, file)
-        file.close()
-        
-    if st.session_state.task == "Change Callouts":
-        logger.info("Change Callouts Clicked")
-        product_description = st.text_area("Enter the product description")
-        if st.button("Analyze product description"):
-            description = analyze_product_description(product_description)
-            if description:
-                st.session_state.title = description.get('title', '')
-                st.session_state.subtitle = description.get('titleSub', '')
-                st.session_state.features = description.get('callouts', [])
+    # Initialize default template in session state
+    if "psd_s3_key" not in st.session_state:
+        st.session_state.psd_s3_key = "Inputs/theone.psd"  # Default template
 
-        if 'title' in st.session_state:
-            text_title = st.text_input("Enter the title", value=st.session_state.title)
-            text_subtitle = st.text_input("Enter the subtitle", value=st.session_state.subtitle)
-            text_feature1 = st.text_input("Callout 1", value=st.session_state.features[0] if len(st.session_state.features) > 0 else "")
-            text_feature2 = st.text_input("Callout 2", value=st.session_state.features[1] if len(st.session_state.features) > 1 else "")
-            text_feature3 = st.text_input("Callout 3", value=st.session_state.features[2] if len(st.session_state.features) > 2 else "")
-            st.markdown(STYLE, unsafe_allow_html=True)
-            if st.button("Generate Infographics"):
+    # Sidebar for PSD upload functionality
+    st.sidebar.header("Upload PSD Template")
+    uploaded_psd = st.sidebar.file_uploader("Upload a PSD Template", type=["psd"])
+    if st.sidebar.button("Upload and Validate PSD"):
+        uploaded_key = upload_psd(uploaded_psd)
+        if uploaded_key:
+            st.session_state.psd_s3_key = uploaded_key  # Update template in session state
+
+    # Infographic generation section
+    st.header("Generate Infographics")
+
+    # Input for product description
+    product_description = st.text_area("Enter the product description for auto-generated callouts")
+    if st.button("Generate Callouts from Description"):
+        with st.spinner("Analyzing product description..."):
+            try:
+                description_data = analyze_product_description(product_description)
+                if description_data:
+                    st.session_state.title = description_data.get("title", "")
+                    st.session_state.subtitle = description_data.get("titleSub", "")
+                    st.session_state.features = description_data.get("callouts", [])
+                    st.success("Generated callouts successfully!")
+                else:
+                    st.error("Failed to generate callouts. Please try again.")
+            except Exception as e:
+                logger.error(f"Error generating callouts: {e}")
+                st.error("An error occurred while generating callouts.")
+
+    # Display generated or manual inputs
+    text_title = st.text_input("Enter the title", value=st.session_state.get("title", ""))
+    text_subtitle = st.text_input("Enter the subtitle", value=st.session_state.get("subtitle", ""))
+    text_feature1 = st.text_input("Callout 1", value=st.session_state.get("features", [""])[0])
+    text_feature2 = st.text_input("Callout 2", value=st.session_state.get("features", ["", ""])[1])
+    text_feature3 = st.text_input("Callout 3", value=st.session_state.get("features", ["", "", ""])[2])
+
+    # Generate infographics using the uploaded or default PSD template
+    if st.button("Generate Infographics"):
+        with st.spinner("Generating infographic..."):
+            try:
                 url = add_text_to_image(
                     text_title,
                     text_subtitle,
                     text_feature1,
                     text_feature2,
                     text_feature3,
-                    "Inputs/theone.psd"
+                    st.session_state.psd_s3_key  # Use persistent PSD key
                 )
-                st.image(url, caption='Image from S3', use_column_width=True)
+                if url:
+                    st.image(url, caption="Generated Image from PSD", use_column_width=True)
+                else:
+                    st.error("Failed to generate infographic. Please try again.")
+            except Exception as e:
+                logger.error(f"Error generating infographic: {e}")
+                st.error("An error occurred while generating the infographic.")
+
+
 
 if __name__ == "__main__":
     main()
